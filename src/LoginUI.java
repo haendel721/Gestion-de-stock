@@ -93,27 +93,37 @@ public class LoginUI extends JFrame {
     }
 
     // Méthode de traitement de la connexion
+    // Méthode appelée lors du clic sur le bouton "Se connecter"
     private void handleLogin() {
-        // Récupération des valeurs saisies
+        // Récupère les valeurs saisies par l'utilisateur
         String username = loginUsername.getText();
         String password = new String(loginPassword.getPassword());
 
-        // Appel du service d'authentification
-        boolean success = UtilisateurService.authentifier(username, password);
+        // Appel au service pour authentifier l'utilisateur
+        Utilisateur utilisateur = UtilisateurService.authentifier(username, password);
 
-        if (success) {
-            // Si authentification réussie
-            JOptionPane.showMessageDialog(this, "Connexion réussie !");
-            dispose(); // Ferme la fenêtre de connexion
+        // Si un utilisateur est trouvé avec les bons identifiants
+        if (utilisateur != null) {
+            // Enregistre les infos de l'utilisateur connecté dans la session
+            session.idUtilisateurConnecte = utilisateur.getId();
+            session.nomUtilisateurConnecte = utilisateur.getNom();
+            session.roleConnecte = utilisateur.getRole();
 
-            // Ouvre la fenêtre d’accueil avec le nom de l'utilisateur
-            AccueilUI accueil = new AccueilUI(loginUsername.getText());
+            // Affiche un message de succès avec le rôle
+            JOptionPane.showMessageDialog(this, "Connexion réussie en tant que " + session.roleConnecte);
+
+            // Ferme la fenêtre Login
+            dispose();
+
+            // Ouvre la fenêtre d'accueil (ou dashboard)
+            AccueilUI accueil = new AccueilUI(utilisateur);
             accueil.setVisible(true);
         } else {
-            // Si échec
+            // Si les identifiants sont invalides
             JOptionPane.showMessageDialog(this, "Identifiants incorrects.", "Erreur", JOptionPane.ERROR_MESSAGE);
         }
     }
+
 
     // Méthode de traitement de l’inscription
     private void handleRegister() {

@@ -36,30 +36,36 @@ public class UtilisateurService {
         }
     }
 
-    // Méthode pour authentifier un utilisateur
-    public static boolean authentifier(String username, String password) {
+    // Méthode pour authentifier un utilisateur et retourner ses informations
+    public static Utilisateur authentifier(String username, String password) {
         try (Connection conn = DatabaseConnexion.getConnection()) {
 
-            // 1. Hachage du mot de passe fourni pour comparer avec la base
+            // Hachage du mot de passe fourni
             String hashedPassword = PasswordUtil.hashPassword(password);
 
-            // 2. Requête SQL pour trouver un utilisateur avec le nom + mot de passe haché
+            // Requête SQL
             String sql = "SELECT * FROM utilisateurs WHERE nom_utilisateur = ? AND mot_de_passe = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
-
             stmt.setString(1, username);
             stmt.setString(2, hashedPassword);
 
-            // Exécution de la requête
             ResultSet rs = stmt.executeQuery();
 
-            // Retourne true si un utilisateur est trouvé
-            return rs.next();
+            if (rs.next()) {
+                Utilisateur user = new Utilisateur();
+                user.setId(rs.getInt("id_utilisateur"));
+                user.setNom(rs.getString("nom_utilisateur"));
+                user.setMotDePasse(rs.getString("mot_de_passe"));
+                user.setRole(rs.getString("role"));
+                return user;
+            }
 
         } catch (SQLException e) {
-            // En cas d'erreur lors de la connexion ou requête SQL
             e.printStackTrace();
-            return false;
         }
+
+        return null;
     }
+
+
 }

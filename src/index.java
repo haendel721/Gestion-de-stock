@@ -7,119 +7,132 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import java.sql.*;
 
-public class index {
+public class index extends JFrame {
+    private Utilisateur utilisateur;
     // DefaultTableModel permet de gérer dynamiquement les données du JTable, sans avoir à redéfinir tout le tableau.
     private static DefaultTableModel model; // Modèle de table pour stocker les données des produits
     private static Connection conn; // Connexion à la base de données
     // DefaultTableModel permet de gérer dynamiquement les données du JTable, sans avoir à redéfinir tout le tableau.
-    public static void main(String[] args) {
+    public index(Utilisateur utilisateur) {
+        this.utilisateur = utilisateur;
+
         try {
-            // Connexion à la base de données via la classe DatabaseConnection
+            // Établir la connexion à la base de données
             conn = DatabaseConnexion.getConnection();
-            // Création de la fenêtre principale
-            JFrame frame = new JFrame("Gestion des Stocks");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(1000, 700);
+
+            // Configuration de la fenêtre principale
+            setTitle("Gestion des Stocks");
+            setSize(1000, 700);
+            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            setLocationRelativeTo(null); // Centrage de la fenêtre
 
             // Titre de l'application
-            JLabel titre = new JLabel("Gestion des stocks ", SwingConstants.CENTER); // SwingConstants.CENTER : fonction pour centrer le texte
+            JLabel titre = new JLabel("Gestion des stocks", SwingConstants.CENTER);
             titre.setFont(new Font("Arial", Font.BOLD, 40));
 
-
-            // Bouton pour ajouter un produit
+            // Création du bouton "Ajouter"
             JButton ajouter = new JButton("Ajouter");
             ajouter.setFont(new Font("Arial", Font.BOLD, 20));
 
-            //  composant du recherche
+            // Zone de recherche + bouton "Rechercher"
             JTextField recherche = new JTextField(10);
             JButton rechercher = new JButton("Rechercher");
 
+            // Panneau pour regrouper la zone de recherche et le bouton
             JPanel panerRechercheEnd = new JPanel(new BorderLayout());
             panerRechercheEnd.add(recherche, BorderLayout.CENTER);
             panerRechercheEnd.add(rechercher, BorderLayout.EAST);
-            JPanel panelRechercher = new JPanel( new BorderLayout());
-            panelRechercher.add(ajouter , BorderLayout.LINE_START);
+
+            JPanel panelRechercher = new JPanel(new BorderLayout());
+            panelRechercher.add(ajouter, BorderLayout.LINE_START);
             panelRechercher.add(panerRechercheEnd, BorderLayout.EAST);
 
-
-            rechercher.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent e) {
-                    // requête sql
-                    String sqlNom = "SELECT * FROM produits WHERE nomProduit = ?";
-                    try (PreparedStatement ppstt = conn.prepareStatement(sqlNom)) {
-                        ppstt.setString(1, recherche.getText()); // => ( index du paramètre , paramètre qu'on veut rechercher
-                        try (ResultSet rs = ppstt.executeQuery()) {
-                            if (!rs.isBeforeFirst()) { // Vérifie si le ResultSet est vide
-                                JOptionPane.showMessageDialog(null, "Le produit n'existe pas dans le stock !");
-                            } else {
-                                while (rs.next()) {
-                                    JOptionPane.showMessageDialog(null,
-                                            "Produit : " + rs.getString("nomProduit") +
-                                                    "\nPrix : " + rs.getDouble("prix") +
-                                                    "\nQuantité : " + rs.getInt("quantite")
-                                    );
-                                    //System.out.println("Produit trouvé: " + rs.getString("nomProduit"));
-                                }
+            // Action de recherche d'un produit par nom
+            rechercher.addActionListener(e -> {
+                String sqlNom = "SELECT * FROM produits WHERE nomProduit = ?";
+                try (PreparedStatement ppstt = conn.prepareStatement(sqlNom)) {
+                    ppstt.setString(1, recherche.getText());
+                    try (ResultSet rs = ppstt.executeQuery()) {
+                        if (!rs.isBeforeFirst()) {
+                            JOptionPane.showMessageDialog(null, "Le produit n'existe pas !");
+                        } else {
+                            while (rs.next()) {
+                                JOptionPane.showMessageDialog(null,
+                                        "Produit : " + rs.getString("nomProduit") +
+                                                "\nPrix : " + rs.getDouble("prix") +
+                                                "\nQuantité : " + rs.getInt("quantite")
+                                );
                             }
-                        } catch (SQLException ex) {
-                            ex.printStackTrace();
-
                         }
-                    } catch (SQLException ex) {
-                        ex.printStackTrace();
                     }
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
                 }
             });
 
-            // Panneau supérieur contenant le titre et le bouton "Ajouter"
+            // Panneau du haut contenant le titre et la barre de recherche
             JPanel panelHaut = new JPanel(new BorderLayout());
             panelHaut.add(titre, BorderLayout.CENTER);
             panelHaut.add(panelRechercher, BorderLayout.AFTER_LAST_LINE);
-            //panelHaut.setBackground(new Color(225 , 225 , 255));
 
-            // Noms des colonnes de la table
-            String[] columnNames = {"Id", "Nom Produit", "Prix Unitaire (Ar)", "Catégorie", "Fournisseur", "Date d'entrée", "Quantité en stock", "Action"};
-            model = new DefaultTableModel(columnNames, 0); // Initialisation du modèle de table
-            JTable table = new JTable(model); // Création de la table avec le modèle
+            // Définition des colonnes de la JTable
+            String[] columnNames = {"Id", "Nom Produit", "Prix Unitaire (Ar)", "Catégorie",
+                    "Fournisseur", "Date d'entrée", "Quantité en stock", "Action"};
+            model = new DefaultTableModel(columnNames, 0);
+            JTable table = new JTable(model);
+            // Supprime la colonne "Action" si l'utilisateur n'est pas admin
+            if (!"admin".equalsIgnoreCase(utilisateur.getRole())) {
+                table.removeColumn(table.getColumn("Action"));
+            }
+            // Appliquer un rendu personnalisé pour les cellules selon la quantité en stock
             for (int i = 0; i < table.getColumnCount(); i++) {
                 table.getColumnModel().getColumn(i).setCellRenderer(new StockRenderer());
             }
 
-
             table.setRowHeight(40); // Hauteur des lignes
-            table.setDefaultEditor(Object.class, null); // Désactivation de l'édition directe des cellules
+            table.setDefaultEditor(Object.class, null); // Empêche l'édition directe
 
-            // Ajout d'un bouton "Modifier et supprimer" dans la colonne "Action"
-            table.getColumn("Action").setCellRenderer(new ButtonRenderer()); //pour que dans la collone Action prendre la forme de boutton dans la table
-            table.getColumn("Action").setCellRenderer(new ButtonRenderer());
-            table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox()));
-            //table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox())); // permettre aux boutton cliquable
-            // ButtonRenderer : class qui transforme le cellule en boutton cliquable
-            //setCellEditor permet de réagir au clic sur le bouton.
-            // ButtonEditor est une classe qui transforme chaque cellule en un bouton cliquable.
-            // Ajout de la table dans un JScrollPane pour permettre le ------------------------
+            if ("admin".equalsIgnoreCase(utilisateur.getRole())){
+                // Configuration des boutons dans la colonne "Action"
+                table.getColumn("Action").setCellRenderer(new ButtonRenderer());
+                table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox()));
+            }
+
+
+            // ScrollPane pour contenir la table
             JScrollPane sp = new JScrollPane(table);
 
+            // Pied de page
             JTextField perso = new JTextField("@copyright 2025 Haendel Abraham");
 
+            // Panneau principal
             JPanel panelContent = new JPanel(new BorderLayout());
             panelContent.add(perso, BorderLayout.SOUTH);
             panelContent.add(panelHaut, BorderLayout.NORTH);
             panelContent.add(sp, BorderLayout.CENTER);
 
-            // Ajout du panneau principal à la fenêtre
-            frame.add(panelContent);
-            frame.setVisible(true);
+            // Ajout du panneau à la fenêtre principale
+            add(panelContent);
 
-            // Chargement des produits depuis la base de données
+            // Chargement initial des produits
             chargerProduits();
 
-            // Ajout d'un écouteur d'événement pour le bouton "Ajouter"
-            ajouter.addActionListener(e -> ajouterProduit());
+            // Affiche ou cache le bouton "Ajouter" selon le rôle de l'utilisateur
+            if ("admin".equalsIgnoreCase(utilisateur.getRole())) {
+                ajouter.addActionListener(e -> ajouterProduit());
+            } else {
+                ajouter.setVisible(false);
+            }
+
+            // Afficher la fenêtre
+            setVisible(true);
+
         } catch (SQLException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null, "Erreur de connexion à la base de données !");
         }
+    }
+    public static void main(String[] args) {
     }
     // Méthode pour charger les produits depuis la base de données
     private static void chargerProduits() {
@@ -160,9 +173,12 @@ public class index {
 
         public ButtonRenderer() {
             setLayout(new FlowLayout(FlowLayout.CENTER));
-            add(btnModifier);
-            add(btnSupprimer);
+            if ("admin".equals(session.roleConnecte)) {
+                add(btnModifier);
+                add(btnSupprimer);
+            }
         }
+
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
@@ -178,19 +194,22 @@ public class index {
         private int currentRow;
 
         public ButtonEditor(JCheckBox jCheckBox) {
-            btnModifier.addActionListener(e -> {
-                modifierProduit(currentRow);
-                fireEditingStopped(); // Arrête l'édition après clic
-            });
+            if ("admin".equals(session.roleConnecte)) {
+                btnModifier.addActionListener(e -> {
+                    modifierProduit(currentRow);
+                    fireEditingStopped();
+                });
 
-            btnSupprimer.addActionListener(e -> {
-                supprimerProduit(currentRow);
-                fireEditingStopped();
-            });
+                btnSupprimer.addActionListener(e -> {
+                    supprimerProduit(currentRow);
+                    fireEditingStopped();
+                });
 
-            panel.add(btnModifier);
-            panel.add(btnSupprimer);
+                panel.add(btnModifier);
+                panel.add(btnSupprimer);
+            }
         }
+
 
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value,
