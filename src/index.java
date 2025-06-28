@@ -86,7 +86,7 @@ public class index {
             }
 
 
-            table.setRowHeight(70); // Hauteur des lignes
+            table.setRowHeight(40); // Hauteur des lignes
             table.setDefaultEditor(Object.class, null); // Désactivation de l'édition directe des cellules
 
             // Ajout d'un bouton "Modifier et supprimer" dans la colonne "Action"
@@ -146,8 +146,17 @@ public class index {
     }
 
     static class ButtonRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        private final JButton btnModifier = new JButton("Modifier");
-        private final JButton btnSupprimer = new JButton("Supprimer");
+        private final JButton btnModifier = new JButton(resizeIcon("/img/modifier-les-informations.png", 20, 20));
+        private final JButton btnSupprimer = new JButton(resizeIcon("/img/supprimer.png", 20, 20));
+
+        private ImageIcon resizeIcon(String resourcePath, int width, int height) {
+            ImageIcon icon = new ImageIcon(getClass().getResource(resourcePath));
+            Image img = icon.getImage();
+            Image resizedImg = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            return new ImageIcon(resizedImg);
+        }
+
+
 
         public ButtonRenderer() {
             setLayout(new FlowLayout(FlowLayout.CENTER));
